@@ -1,6 +1,5 @@
 import { Stack, Link } from "expo-router";
 import { useFonts } from "expo-font";
-import { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { Platform, Pressable, Text } from "react-native";
 import TypewriterText from "../components/TypewriterText";
