@@ -3,6 +3,7 @@ import { useFonts } from "expo-font";
 import { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { Platform, Pressable, Text } from "react-native";
+import TypewriterText from "../components/TypewriterText";
 
 export default function RootLayout() {
   const [loaded] = useFonts({
@@ -19,6 +20,7 @@ export default function RootLayout() {
           headerStyle: { backgroundColor: "#000" },
           headerTintColor: "#fff",
           headerTitleStyle: { color: "#fff", fontSize: 32, fontFamily: Platform.OS === "web" ? "Bitcount, system-ui, sans-serif" as any : undefined },
+          headerTitle: (props) => <TypewriterText text={props.children} speedMsPerChar={18} pauseAtEndMs={0} style={{ color: "#fff", fontSize: 32, fontFamily: Platform.OS === "web" ? "Bitcount, system-ui, sans-serif" : undefined }} />,
           headerRight: () => (
             <>
               <Link href="/accounts" asChild>

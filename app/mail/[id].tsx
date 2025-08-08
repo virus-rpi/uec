@@ -1,5 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
 import { Text, View, ActivityIndicator, Platform } from "react-native";
+import TypewriterText from "@/components/TypewriterText";
 import { Email } from "@/lib/email_utils";
 import { getAccounts, GmailAccount } from "@/lib/accounts";
 import { fetchGmailEmailById } from "@/lib/gmail";
@@ -44,9 +45,12 @@ export default function MailDetail() {
     return (
       <View style={{ flex: 1, backgroundColor: "#000", alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator size="large" color="#fff" />
-        <Text style={{ marginTop: 12, color: "#aaa", fontFamily: Platform.OS === "web" ? "Bitcount, system-ui, sans-serif" : undefined, fontSize: 18 }}>
-          Loading message…
-        </Text>
+        <TypewriterText
+          text="Loading message…"
+          startDelayMs={150}
+          speedMsPerChar={24}
+          style={{ marginTop: 12, color: "#aaa", fontFamily: Platform.OS === "web" ? "Bitcount, system-ui, sans-serif" : undefined, fontSize: 18 }}
+        />
       </View>
     );
   }

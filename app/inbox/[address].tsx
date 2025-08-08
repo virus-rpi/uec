@@ -1,5 +1,6 @@
 import { Link, useLocalSearchParams } from "expo-router";
 import {FlatList, Pressable, Text, View, ActivityIndicator, Platform} from "react-native";
+import TypewriterText from "@/components/TypewriterText";
 import { useEffect, useState } from "react";
 import { fetchGmailEmails } from "@/lib/gmail";
 import {getAccounts, GmailAccount} from "@/lib/accounts";
@@ -50,9 +51,12 @@ export default function InboxByAddress() {
       {loading ? (
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
           <ActivityIndicator size="large" color="#fff" style={{ position: "absolute", top: "50%", left: "50%", marginLeft: -20, marginTop: -20 }} />
-          <Text style={{ marginTop: 12, color: "#aaa", fontFamily: Platform.OS === "web" ? "Bitcount, system-ui, sans-serif" : undefined, fontSize: 18 }}>
-            Loading emails…
-          </Text>
+          <TypewriterText
+            text="Loading emails…"
+            startDelayMs={150}
+            speedMsPerChar={24}
+            style={{ marginTop: 12, color: "#aaa", fontFamily: Platform.OS === "web" ? "Bitcount, system-ui, sans-serif" : undefined, fontSize: 18 }}
+          />
         </View>
       ) : error ? (
         <T style={{ color: "#f55", marginBottom: 12 }}>{error}</T>

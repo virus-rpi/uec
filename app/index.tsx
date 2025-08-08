@@ -4,6 +4,8 @@ import { Email, groupByToAddress } from "@/lib/email_utils";
 import { getAccounts } from "@/lib/accounts";
 import { fetchAllEmailsFromAccounts } from "@/lib/gmail";
 import { HtmlViewer } from "@/components/HtmlViewer";
+import { FadeSlideIn } from "@/components/animations";
+import TypewriterText from "@/components/TypewriterText";
 
 function Heading(props: any) {
   return (
@@ -96,9 +98,13 @@ export default function Index() {
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
           <Wireframe />
           <ActivityIndicator size="large" color="#fff" style={{ position: "absolute", top: "50%", left: "50%", marginLeft: -20, marginTop: -20 }} />
-          <Text style={{ marginTop: 12, color: "#aaa", fontFamily: Platform.OS === "web" ? "Bitcount, system-ui, sans-serif" : undefined, fontSize: 18 }}>
-            Loading emails…
-          </Text>
+          <TypewriterText
+            text="Loading emails…"
+            startDelayMs={50}
+            speedMsPerChar={12}
+            pauseAtEndMs={0}
+            style={{ marginTop: 12, color: "#aaa", fontFamily: Platform.OS === "web" ? "Bitcount, system-ui, sans-serif" : undefined, fontSize: 18 }}
+          />
         </View>
       )}
       {!!error && (
@@ -113,8 +119,10 @@ export default function Index() {
       )}
       {!loading && (
         <View style={{ flex: 1, flexDirection: isNarrow ? "column" : "row" }}>
-          <View style={{ width: isNarrow ? "100%" : "22%", borderRightWidth: isNarrow ? 0 : 1, borderRightColor: "#111", padding: 8 }}>
-            <Heading style={{ fontSize: 20, fontWeight: "700", marginBottom: 8 }}>Virtual Inboxes</Heading>
+          <FadeSlideIn delay={80} style={{ width: isNarrow ? "100%" : "22%", borderRightWidth: isNarrow ? 0 : 1, borderRightColor: "#111", padding: 8 }}>
+            <Heading style={{ fontSize: 20, fontWeight: "700", marginBottom: 8 }}>
+              <TypewriterText text="Virtual Inboxes" startDelayMs={200} pauseAtEndMs={0} />
+            </Heading>
             <FlatList
               data={addresses}
               keyExtractor={(addr) => addr}
@@ -147,10 +155,12 @@ export default function Index() {
                 );
               }}
             />
-          </View>
+          </FadeSlideIn>
 
-          <View style={{ width: isNarrow ? "100%" : "28%", borderRightWidth: isNarrow ? 0 : 1, borderRightColor: "#111", padding: 8 }}>
-            <Heading style={{ fontSize: 20, fontWeight: "700", marginBottom: 8 }}>Messages</Heading>
+          <FadeSlideIn delay={180} style={{ width: isNarrow ? "100%" : "28%", borderRightWidth: isNarrow ? 0 : 1, borderRightColor: "#111", padding: 8 }}>
+            <Heading style={{ fontSize: 20, fontWeight: "700", marginBottom: 8 }}>
+              <TypewriterText text="Messages" startDelayMs={600} pauseAtEndMs={0} />
+            </Heading>
             {selectedAddress ? (
               <FlatList
                 data={messages}
@@ -179,10 +189,12 @@ export default function Index() {
             ) : (
               <T style={{ color: "#888" }}>Select a virtual inbox on the left.</T>
             )}
-          </View>
+          </FadeSlideIn>
 
-          <View style={{ flex: 1, padding: 12, maxHeight: '100%', overflow: Platform.OS === 'web' ? 'scroll' : undefined }}>
-            <Heading style={{ fontSize: 20, fontWeight: "700", marginBottom: 8 }}>Message</Heading>
+          <FadeSlideIn delay={260} style={{ flex: 1, padding: 12, maxHeight: '100%', overflow: Platform.OS === 'web' ? 'scroll' : undefined }}>
+            <Heading style={{ fontSize: 20, fontWeight: "700", marginBottom: 8 }}>
+              <TypewriterText text="Message" startDelayMs={1000} pauseAtEndMs={900} />
+            </Heading>
             {selectedMessage ? (
               <View style={{ flex: 1, maxHeight: "100%", overflowY: "scroll"}}>
                 <Heading style={{ fontSize: 18, fontWeight: "700", marginBottom: 8 }}>{selectedMessage.subject}</Heading>
@@ -200,7 +212,7 @@ export default function Index() {
             ) : (
               <T style={{ color: "#888" }}>Select a message from the middle column.</T>
             )}
-          </View>
+          </FadeSlideIn>
         </View>
       )}
     </View>

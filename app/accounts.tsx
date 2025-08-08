@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, FlatList, Pressable, ScrollView, Text, TextInput, View, Modal, Platform } from "react-native";
+import { FadeSlideIn, ScaleIn } from "@/components/animations";
 import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
 import * as Google from "expo-auth-session/providers/google";
@@ -179,7 +180,7 @@ export default function AccountsScreen() {
       </View>
 
       {showManual && (
-        <View style={{ borderWidth: 1, borderColor: "#222", borderRadius: 10, padding: 12, marginBottom: 20, backgroundColor: "#070707" }}>
+        <FadeSlideIn delay={80} style={{ borderWidth: 1, borderColor: "#222", borderRadius: 10, padding: 12, marginBottom: 20, backgroundColor: "#070707" }}>
           <Heading style={{ fontSize: 18, marginBottom: 10 }}>Manual configuration</Heading>
 
           <View style={{ flexDirection: "row", gap: 10, marginBottom: 10 }}>
@@ -236,7 +237,7 @@ export default function AccountsScreen() {
           <T style={{ color: "#aaa", marginTop: 10 }}>
             Note: React Native apps cannot directly open IMAP/POP/SMTP sockets without additional native modules or a backend. This app stores settings securely now; actual mail sync will require adding a backend or socket-capable libraries.
           </T>
-        </View>
+        </FadeSlideIn>
       )}
 
       <Heading style={{ fontSize: 18, marginBottom: 8 }}>Configured accounts</Heading>
@@ -249,38 +250,40 @@ export default function AccountsScreen() {
             keyExtractor={(a) => a.id}
             scrollEnabled={false}
             ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-            renderItem={({ item }) => (
-              <View style={{ flexDirection: "row", alignItems: "center", padding: 12, borderWidth: 1, borderColor: "#222", borderRadius: 8, backgroundColor: "#070707" }}>
-                <View style={{ flex: 1 }}>
-                  <T style={{ fontWeight: "700" }}>{item.type === "gmail" ? `Gmail${item.email ? `: ${item.email}` : ""}` : item.type === "manual" ? item.displayName || "Manual account" : "Account"}</T>
-                  {item.type === "gmail" && (
-                    <T style={{ color: "#bbb", marginTop: 4 }}>Access token stored. Expires at: {item.expiresAt ? new Date(item.expiresAt).toLocaleString() : "unknown"}</T>
-                  )}
-                  {item.type === "manual" && (
-                    <T style={{ color: "#bbb", marginTop: 4 }}>{item.incoming.protocol.toUpperCase()} {item.incoming.username}@{item.incoming.host} / SMTP {item.outgoing.host}</T>
-                  )}
+            renderItem={({ item, index }) => (
+              <ScaleIn delay={index * 40}>
+                <View style={{ flexDirection: "row", alignItems: "center", padding: 12, borderWidth: 1, borderColor: "#222", borderRadius: 8, backgroundColor: "#070707" }}>
+                  <View style={{ flex: 1 }}>
+                    <T style={{ fontWeight: "700" }}>{item.type === "gmail" ? `Gmail${item.email ? `: ${item.email}` : ""}` : item.type === "manual" ? item.displayName || "Manual account" : "Account"}</T>
+                    {item.type === "gmail" && (
+                      <T style={{ color: "#bbb", marginTop: 4 }}>Access token stored. Expires at: {item.expiresAt ? new Date(item.expiresAt).toLocaleString() : "unknown"}</T>
+                    )}
+                    {item.type === "manual" && (
+                      <T style={{ color: "#bbb", marginTop: 4 }}>{item.incoming.protocol.toUpperCase()} {item.incoming.username}@{item.incoming.host} / SMTP {item.outgoing.host}</T>
+                    )}
+                  </View>
+                  <Pressable
+                    onPress={() => {
+                      setPendingRemoveId(item.id);
+                      setModalVisible(true);
+                    }}
+                    style={({ pressed }) => ({
+                      marginLeft: 10,
+                      width: 36,
+                      height: 36,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: "transparent",
+                      borderRadius: 0,
+                      borderWidth: 0,
+                      padding: 0,
+                    })}
+                    accessibilityLabel="Remove account"
+                  >
+                    <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 20, textAlign: "center", fontFamily: Platform.OS === "web" ? "Bitcount, system-ui, sans-serif" : undefined }}>×</Text>
+                  </Pressable>
                 </View>
-                <Pressable
-                  onPress={() => {
-                    setPendingRemoveId(item.id);
-                    setModalVisible(true);
-                  }}
-                  style={({ pressed }) => ({
-                    marginLeft: 10,
-                    width: 36,
-                    height: 36,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: "transparent",
-                    borderRadius: 0,
-                    borderWidth: 0,
-                    padding: 0,
-                  })}
-                  accessibilityLabel="Remove account"
-                >
-                  <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 20, textAlign: "center", fontFamily: Platform.OS === "web" ? "Bitcount, system-ui, sans-serif" : undefined }}>×</Text>
-                </Pressable>
-              </View>
+              </ScaleIn>
             )}
           />
           <Modal
