@@ -38,6 +38,8 @@ jobs:
               cargo-tauri
               patchelf
               glibc
+              fuse
+              libstdcxx5
             ];
             buildInputs = with pkgs; [
               at-spi2-atk
