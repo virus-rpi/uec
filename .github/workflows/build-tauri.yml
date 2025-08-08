@@ -36,6 +36,8 @@ jobs:
               cargo
               nodejs
               cargo-tauri
+              patchelf
+              glibc
             ];
             buildInputs = with pkgs; [
               at-spi2-atk
