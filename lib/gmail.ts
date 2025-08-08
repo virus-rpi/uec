@@ -1,7 +1,7 @@
-import { Email } from "./email_utils";
-import { GmailAccount, MailAccount } from "./accounts";
+import {Email} from "./email_utils";
+import {GmailAccount, MailAccount} from "./accounts";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Platform } from "react-native";
+import {Platform} from "react-native";
 
 function getHeader(headers: { name: string; value: string }[], key: string): string | undefined {
   const h = headers.find((x) => x.name.toLowerCase() === key.toLowerCase());
@@ -78,6 +78,30 @@ async function setCachedEmail(id: string, email: Email): Promise<void> {
   } catch {}
 }
 
+async function getCachedEmailList(accountEmail: string): Promise<{ ids: string[]; nextPageToken?: string } | undefined> {
+  try {
+    if (Platform.OS === "web") {
+      const raw = localStorage.getItem(`uec.emailList.${accountEmail}`);
+      if (raw) return JSON.parse(raw);
+    } else {
+      const raw = await AsyncStorage.getItem(`uec.emailList.${accountEmail}`);
+      if (raw) return JSON.parse(raw);
+    }
+  } catch {}
+  return undefined;
+}
+
+async function setCachedEmailList(accountEmail: string, ids: string[], nextPageToken?: string): Promise<void> {
+  try {
+    const data = JSON.stringify({ ids, nextPageToken });
+    if (Platform.OS === "web") {
+      localStorage.setItem(`uec.emailList.${accountEmail}`, data);
+    } else {
+      await AsyncStorage.setItem(`uec.emailList.${accountEmail}`, data);
+    }
+  } catch {}
+}
+
 function getOneMonthAgoDateString() {
   const d = new Date();
   d.setMonth(d.getMonth() - 1);
@@ -97,7 +121,55 @@ export async function fetchGmailEmails(
     url += `&q=after:${getOneMonthAgoDateString()}`;
   }
 
-  // 1) List message IDs
+  // Try to use cached email list first
+  if (account.email) {
+    const cachedList = await getCachedEmailList(account.email);
+    if (cachedList && !pageToken) {
+      // Use cached IDs to get emails from cache
+      const emailPromises = cachedList.ids.map(async (id) => {
+        let cached = await getCachedEmail(id);
+        if (cached) {
+          gmailEmailCache[id] = cached;
+          return cached;
+        }
+        // If not cached, fallback to fetch
+        const msgRes = await fetch(
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=full`,
+          { headers }
+        );
+        if (!msgRes.ok) return undefined;
+        const msg = await msgRes.json();
+        const hdrs: { name: string; value: string }[] = msg.payload?.headers || [];
+        const from = getHeader(hdrs, "From") || "";
+        const to = getHeader(hdrs, "To") || (account.email || "");
+        const subject = getHeader(hdrs, "Subject") || "(no subject)";
+        const dateHeader = getHeader(hdrs, "Date");
+        const date = dateHeader ? new Date(dateHeader).toISOString() : new Date(msg.internalDate ? Number(msg.internalDate) : Date.now()).toISOString();
+        const snippet: string = msg.snippet || "";
+        const bodyText = extractTextFromPayload(msg.payload);
+        const bodyHtml = extractHtmlFromPayload(msg.payload);
+        const body = bodyText || snippet;
+        const email: Email = {
+          id,
+          to,
+          from,
+          subject,
+          snippet,
+          date,
+          body,
+          bodyText: bodyText ?? undefined,
+          bodyHtml: bodyHtml ?? undefined
+        };
+        await setCachedEmail(id, email);
+        gmailEmailCache[id] = email;
+        return email;
+      });
+      const emails = (await Promise.all(emailPromises)).filter(Boolean) as Email[];
+      return { emails, nextPageToken: cachedList.nextPageToken };
+    }
+  }
+
+  // If no cached list, fetch from API
   const listRes = await fetch(url, { headers });
   if (!listRes.ok) {
     throw new Error(`Gmail list failed: HTTP ${listRes.status}`);
@@ -107,10 +179,17 @@ export async function fetchGmailEmails(
   const nextPageToken: string | undefined = listJson.nextPageToken;
   if (ids.length === 0) return { emails: [], nextPageToken, reachedOneMonthAgo: true };
 
-  // 2) Fetch message details in parallel
+  // Cache the list of IDs and nextPageToken
+  if (account.email) {
+    await setCachedEmailList(account.email, ids, nextPageToken);
+  }
+
   const emailPromises = ids.map(async (id) => {
     let cached = await getCachedEmail(id);
-    if (cached) return cached;
+    if (cached) {
+      gmailEmailCache[id] = cached;
+      return cached;
+    }
     const msgRes = await fetch(
       `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=full`,
       { headers }
@@ -127,8 +206,19 @@ export async function fetchGmailEmails(
     const bodyText = extractTextFromPayload(msg.payload);
     const bodyHtml = extractHtmlFromPayload(msg.payload);
     const body = bodyText || snippet; // keep legacy field populated for older UI
-    const email: Email = { id, to, from, subject, snippet, date, body, bodyText: bodyText ?? undefined, bodyHtml: bodyHtml ?? undefined };
+    const email: Email = {
+      id,
+      to,
+      from,
+      subject,
+      snippet,
+      date,
+      body,
+      bodyText: bodyText ?? undefined,
+      bodyHtml: bodyHtml ?? undefined
+    };
     await setCachedEmail(id, email);
+    gmailEmailCache[id] = email;
     return email;
   });
   const emails = (await Promise.all(emailPromises)).filter(Boolean) as Email[];
@@ -189,3 +279,4 @@ export async function fetchGmailEmailById(account: GmailAccount, id: string): Pr
   await setCachedEmail(id, email);
   return email;
 }
+

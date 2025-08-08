@@ -60,7 +60,7 @@ export default function MailDetail() {
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: "#000" }} contentContainerStyle={{ padding: 16 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: "#000" }} contentContainerStyle={{ padding: 16, flexGrow: 1 }}>
       <T style={{ fontSize: 20, fontWeight: "700", marginBottom: 12 }}>{mail.subject}</T>
       <T style={{ color: "#bbb" }}>From: {mail.from}</T>
       <T style={{ color: "#bbb" }}>To: {mail.to}</T>
