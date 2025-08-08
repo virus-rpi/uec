@@ -5,16 +5,21 @@ import { StatusBar } from "expo-status-bar";
 import { Platform, Pressable, Text } from "react-native";
 
 export default function RootLayout() {
-  const [loaded] = useFonts({});
+  const [loaded] = useFonts({
+    Bitcount: require("../assets/fonts/Bitcount.ttf"),
+  });
 
   useEffect(() => {
     if (Platform.OS === "web") {
-      const id = "gf-bitcount";
+      const id = "bitcount-preload";
       if (!document.getElementById(id)) {
         const link = document.createElement("link");
         link.id = id;
-        link.rel = "stylesheet";
-        link.href = "https://fonts.googleapis.com/css2?family=Bitcount:wght@400;700&display=swap";
+        link.rel = "preload";
+        link.as = "font";
+        link.href = "/assets/fonts/Bitcount.ttf";
+        link.type = "font/ttf";
+        link.crossOrigin = "anonymous";
         document.head.appendChild(link);
       }
     }

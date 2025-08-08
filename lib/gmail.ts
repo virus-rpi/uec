@@ -1,5 +1,7 @@
 import { Email } from "./email_utils";
 import { GmailAccount, MailAccount } from "./accounts";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
 
 function getHeader(headers: { name: string; value: string }[], key: string): string | undefined {
   const h = headers.find((x) => x.name.toLowerCase() === key.toLowerCase());
@@ -32,30 +34,74 @@ function extractTextFromPayload(payload: any): string | undefined {
   return undefined;
 }
 
-export async function fetchGmailEmails(account: GmailAccount, maxResults: number = 20): Promise<Email[]> {
+// Improved cache: cache by message ID
+const gmailEmailCache: Record<string, Email> = {};
+let gmailPageTokenCache: Record<string, string | undefined> = {};
+
+async function getCachedEmail(id: string): Promise<Email | undefined> {
+  if (gmailEmailCache[id]) return gmailEmailCache[id];
+  try {
+    if (Platform.OS === "web") {
+      const raw = localStorage.getItem(`uec.email.${id}`);
+      if (raw) return JSON.parse(raw) as Email;
+    } else {
+      const raw = await AsyncStorage.getItem(`uec.email.${id}`);
+      if (raw) return JSON.parse(raw) as Email;
+    }
+  } catch {}
+  return undefined;
+}
+
+async function setCachedEmail(id: string, email: Email): Promise<void> {
+  gmailEmailCache[id] = email;
+  try {
+    const data = JSON.stringify(email);
+    if (Platform.OS === "web") {
+      localStorage.setItem(`uec.email.${id}` , data);
+    } else {
+      await AsyncStorage.setItem(`uec.email.${id}`, data);
+    }
+  } catch {}
+}
+
+function getOneMonthAgoDateString() {
+  const d = new Date();
+  d.setMonth(d.getMonth() - 1);
+  return `${d.getFullYear()}/${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getDate().toString().padStart(2, "0")}`;
+}
+
+export async function fetchGmailEmails(
+  account: GmailAccount,
+  maxResults: number = 20,
+  pageToken?: string,
+  onlyOneMonth: boolean = false
+): Promise<{ emails: Email[]; nextPageToken?: string; reachedOneMonthAgo?: boolean }> {
   const headers = { Authorization: `Bearer ${account.accessToken}` } as const;
+  let url = `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${maxResults}`;
+  if (pageToken) url += `&pageToken=${pageToken}`;
+  if (onlyOneMonth) {
+    url += `&q=after:${getOneMonthAgoDateString()}`;
+  }
 
   // 1) List message IDs
-  const listRes = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${maxResults}`, {
-    headers,
-  });
+  const listRes = await fetch(url, { headers });
   if (!listRes.ok) {
     throw new Error(`Gmail list failed: HTTP ${listRes.status}`);
   }
   const listJson = await listRes.json();
   const ids: string[] = (listJson.messages || []).map((m: any) => m.id);
-  if (ids.length === 0) return [];
+  const nextPageToken: string | undefined = listJson.nextPageToken;
+  if (ids.length === 0) return { emails: [], nextPageToken, reachedOneMonthAgo: true };
 
-  // 2) Fetch message details
-  const emails: Email[] = [];
-  for (const id of ids) {
+  // 2) Fetch message details in parallel
+  const emailPromises = ids.map(async (id) => {
+    let cached = await getCachedEmail(id);
+    if (cached) return cached;
     const msgRes = await fetch(
       `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=full`,
       { headers }
     );
-    if (!msgRes.ok) {
-      continue;
-    }
+    if (!msgRes.ok) return undefined;
     const msg = await msgRes.json();
     const hdrs: { name: string; value: string }[] = msg.payload?.headers || [];
     const from = getHeader(hdrs, "From") || "";
@@ -65,11 +111,29 @@ export async function fetchGmailEmails(account: GmailAccount, maxResults: number
     const date = dateHeader ? new Date(dateHeader).toISOString() : new Date(msg.internalDate ? Number(msg.internalDate) : Date.now()).toISOString();
     const snippet: string = msg.snippet || "";
     const body = extractTextFromPayload(msg.payload) || snippet;
+    const email: Email = { id, to, from, subject, snippet, date, body };
+    await setCachedEmail(id, email);
+    return email;
+  });
+  const emails = (await Promise.all(emailPromises)).filter(Boolean) as Email[];
 
-    emails.push({ id, to, from, subject, snippet, date, body });
+  return { emails, nextPageToken };
+}
+
+export async function fetchGmailEmailsOneMonth(account: GmailAccount, maxResults: number = 50): Promise<Email[]> {
+  let allEmails: Email[] = [];
+  let pageToken: string | undefined = undefined;
+  let reachedOneMonthAgo = false;
+  do {
+    const { emails, nextPageToken, reachedOneMonthAgo: reached } = await fetchGmailEmails(account, maxResults, pageToken, true);
+    allEmails = allEmails.concat(emails);
+    pageToken = nextPageToken;
+    reachedOneMonthAgo = reached || !nextPageToken;
+  } while (!reachedOneMonthAgo && pageToken);
+  if (account.email) {
+    gmailPageTokenCache[account.email] = pageToken;
   }
-
-  return emails;
+  return allEmails;
 }
 
 export async function fetchAllEmailsFromAccounts(accounts: MailAccount[]): Promise<Email[]> {
@@ -77,7 +141,7 @@ export async function fetchAllEmailsFromAccounts(accounts: MailAccount[]): Promi
   const all: Email[] = [];
   for (const acc of gmailAccounts) {
     try {
-      const items = await fetchGmailEmails(acc as GmailAccount);
+      const items = await fetchGmailEmailsOneMonth(acc as GmailAccount);
       all.push(...items);
     } catch (e) {
       console.warn("Failed to fetch from account", acc.id, e);

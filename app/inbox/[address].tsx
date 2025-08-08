@@ -1,5 +1,5 @@
 import { Link, useLocalSearchParams } from "expo-router";
-import { FlatList, Pressable, Text, View } from "react-native";
+import {FlatList, Pressable, Text, View, ActivityIndicator, Platform} from "react-native";
 import { useEffect, useState } from "react";
 import { fetchGmailEmails } from "@/lib/gmail";
 import {getAccounts, GmailAccount} from "@/lib/accounts";
@@ -13,23 +13,23 @@ export default function InboxByAddress() {
   const { address } = useLocalSearchParams<{ address: string }>();
   const [emails, setEmails] = useState<Email[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [gmailAccount, setGmailAccount] = useState<GmailAccount | undefined>(undefined);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     async function loadAccountsAndEmails() {
       setError(null);
-      setGmailAccount(undefined);
+      setLoading(true);
       try {
         const accounts = await getAccounts();
         const gmail = accounts.find(acc => acc.type === "gmail") as GmailAccount | undefined;
-        setGmailAccount(gmail);
         if (!gmail) {
           setError("No Gmail account connected.");
           setEmails([]);
+          setLoading(false);
           return;
         }
         const fetched = await fetchGmailEmails(gmail);
-        setEmails(fetched.filter((e) => e.to === address));
+        setEmails(fetched.emails.filter((e: Email) => e.to === address));
       } catch (err: any) {
         if (err?.message?.includes("403")) {
           setError("Google API access denied (403). Please re-authenticate.");
@@ -37,6 +37,8 @@ export default function InboxByAddress() {
           setError("Failed to load emails.");
         }
         setEmails([]);
+      } finally {
+        setLoading(false);
       }
     }
     loadAccountsAndEmails().then();
@@ -45,7 +47,14 @@ export default function InboxByAddress() {
   return (
     <View style={{ flex: 1, backgroundColor: "#000", padding: 12 }}>
       <T style={{ color: "#aaa", marginBottom: 8 }}>To: {address}</T>
-      {error ? (
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <ActivityIndicator size="large" color="#fff" style={{ position: "absolute", top: "50%", left: "50%", marginLeft: -20, marginTop: -20 }} />
+          <Text style={{ marginTop: 12, color: "#aaa", fontFamily: Platform.OS === "web" ? "Bitcount, system-ui, sans-serif" : undefined, fontSize: 18 }}>
+            Loading emails…
+          </Text>
+        </View>
+      ) : error ? (
         <T style={{ color: "#f55", marginBottom: 12 }}>{error}</T>
       ) : (
         <FlatList

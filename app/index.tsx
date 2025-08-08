@@ -1,4 +1,4 @@
-import { FlatList, Pressable, Text, View, useWindowDimensions } from "react-native";
+import { FlatList, Pressable, Text, View, useWindowDimensions, ActivityIndicator, Platform } from "react-native";
 import { useEffect, useMemo, useState } from "react";
 import { Email, groupByToAddress } from "@/lib/email_utils";
 import { getAccounts, MailAccount } from "@/lib/accounts";
@@ -27,6 +27,18 @@ function T(props: any) {
         props.style,
       ]}
     />
+  );
+}
+
+function Wireframe() {
+  return (
+    <View style={{ flex: 1, justifyContent: "center", alignItems: "center", opacity: 0.3 }}>
+      <View style={{ width: "90%", height: 40, backgroundColor: "#222", borderRadius: 8, marginBottom: 16 }} />
+      <View style={{ width: "90%", height: 60, backgroundColor: "#222", borderRadius: 8, marginBottom: 8 }} />
+      <View style={{ width: "90%", height: 60, backgroundColor: "#222", borderRadius: 8, marginBottom: 8 }} />
+      <View style={{ width: "90%", height: 60, backgroundColor: "#222", borderRadius: 8, marginBottom: 8 }} />
+      <View style={{ width: "90%", height: 60, backgroundColor: "#222", borderRadius: 8, marginBottom: 8 }} />
+    </View>
   );
 }
 
@@ -82,8 +94,12 @@ export default function Index() {
   return (
     <View style={{ flex: 1, backgroundColor: "#000", margin: 10 }}>
       {loading && (
-        <View style={{ padding: 8, backgroundColor: "#0a0a0a", borderRadius: 8, borderWidth: 1, borderColor: "#222", marginBottom: 8 }}>
-          <T>Loading emails…</T>
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <Wireframe />
+          <ActivityIndicator size="large" color="#fff" style={{ position: "absolute", top: "50%", left: "50%", marginLeft: -20, marginTop: -20 }} />
+          <Text style={{ marginTop: 12, color: "#aaa", fontFamily: Platform.OS === "web" ? "Bitcount, system-ui, sans-serif" : undefined, fontSize: 18 }}>
+            Loading emails…
+          </Text>
         </View>
       )}
       {!!error && (
@@ -96,90 +112,92 @@ export default function Index() {
           <T>No emails to show yet. Connect your account via the Accounts button in the header.</T>
         </View>
       )}
-      <View style={{ flex: 1, flexDirection: isNarrow ? "column" : "row" }}>
-        <View style={{ width: isNarrow ? "100%" : "22%", borderRightWidth: isNarrow ? 0 : 1, borderRightColor: "#111", padding: 8 }}>
-          <Heading style={{ fontSize: 20, fontWeight: "700", marginBottom: 8 }}>Virtual Inboxes</Heading>
-          <FlatList
-            data={addresses}
-            keyExtractor={(addr) => addr}
-            ItemSeparatorComponent={() => <View style={{ height: 6 }} />}
-            renderItem={({ item: address }) => {
-              const list = groups[address];
-              const latest = list.slice().sort((a, b) => b.date.localeCompare(a.date))[0];
-              const selected = address === selectedAddress;
-              return (
-                <Pressable
-                  onPress={() => {
-                    setSelectedAddress(address);
-                    const firstId = list.slice().sort((a, b) => b.date.localeCompare(a.date))[0]?.id ?? null;
-                    setSelectedMessageId(firstId);
-                  }}
-                  style={({ pressed }) => ({
-                    padding: 10,
-                    backgroundColor: selected ? "#0f0f0f" : pressed ? "#0a0a0a" : "#050505",
-                    borderRadius: 10,
-                    borderWidth: 1,
-                    borderColor: selected ? "#2a2a2a" : "#1a1a1a",
-                  })}
-                >
-                  <T style={{ fontSize: 15, fontWeight: "600", marginBottom: 2 }}>{address}</T>
-                  <T style={{ color: "#bbb" }} numberOfLines={1}>
-                    {latest.subject} — {latest.snippet}
-                  </T>
-                  <T style={{ color: "#666", marginTop: 4 }}>{list.length} message(s)</T>
-                </Pressable>
-              );
-            }}
-          />
-        </View>
-
-        <View style={{ width: isNarrow ? "100%" : "28%", borderRightWidth: isNarrow ? 0 : 1, borderRightColor: "#111", padding: 8 }}>
-          <Heading style={{ fontSize: 20, fontWeight: "700", marginBottom: 8 }}>Messages</Heading>
-          {selectedAddress ? (
+      {!loading && (
+        <View style={{ flex: 1, flexDirection: isNarrow ? "column" : "row" }}>
+          <View style={{ width: isNarrow ? "100%" : "22%", borderRightWidth: isNarrow ? 0 : 1, borderRightColor: "#111", padding: 8 }}>
+            <Heading style={{ fontSize: 20, fontWeight: "700", marginBottom: 8 }}>Virtual Inboxes</Heading>
             <FlatList
-              data={messages}
-              keyExtractor={(m) => m.id}
+              data={addresses}
+              keyExtractor={(addr) => addr}
               ItemSeparatorComponent={() => <View style={{ height: 6 }} />}
-              renderItem={({ item }) => {
-                const selected = item.id === selectedMessageId;
+              renderItem={({ item: address }) => {
+                const list = groups[address];
+                const latest = list.slice().sort((a, b) => b.date.localeCompare(a.date))[0];
+                const selected = address === selectedAddress;
                 return (
                   <Pressable
-                    onPress={() => setSelectedMessageId(item.id)}
+                    onPress={() => {
+                      setSelectedAddress(address);
+                      const firstId = list.slice().sort((a, b) => b.date.localeCompare(a.date))[0]?.id ?? null;
+                      setSelectedMessageId(firstId);
+                    }}
                     style={({ pressed }) => ({
                       padding: 10,
-                      backgroundColor: selected ? "#101010" : pressed ? "#0a0a0a" : "#050505",
+                      backgroundColor: selected ? "#0f0f0f" : pressed ? "#0a0a0a" : "#050505",
                       borderRadius: 10,
                       borderWidth: 1,
                       borderColor: selected ? "#2a2a2a" : "#1a1a1a",
                     })}
                   >
-                    <T style={{ fontSize: 15, fontWeight: "600" }}>{item.subject}</T>
-                    <T style={{ color: "#bbb" }} numberOfLines={1}>{item.snippet}</T>
-                    <T style={{ color: "#666", marginTop: 4 }}>From: {item.from}</T>
+                    <T style={{ fontSize: 15, fontWeight: "600", marginBottom: 2 }}>{address}</T>
+                    <T style={{ color: "#bbb" }} numberOfLines={1}>
+                      {latest.subject} — {latest.snippet}
+                    </T>
+                    <T style={{ color: "#666", marginTop: 4 }}>{list.length} message(s)</T>
                   </Pressable>
                 );
               }}
             />
-          ) : (
-            <T style={{ color: "#888" }}>Select a virtual inbox on the left.</T>
-          )}
-        </View>
+          </View>
 
-        <View style={{ flex: 1, padding: 12 }}>
-          <Heading style={{ fontSize: 20, fontWeight: "700", marginBottom: 8 }}>Message</Heading>
-          {selectedMessage ? (
-            <View>
-              <Heading style={{ fontSize: 18, fontWeight: "700", marginBottom: 8 }}>{selectedMessage.subject}</Heading>
-              <T style={{ color: "#bbb" }}>From: {selectedMessage.from}</T>
-              <T style={{ color: "#bbb" }}>To: {selectedMessage.to}</T>
-              <T style={{ color: "#666", marginBottom: 12 }}>{new Date(selectedMessage.date).toLocaleString()}</T>
-              <T style={{ lineHeight: 22 }}>{selectedMessage.body}</T>
-            </View>
-          ) : (
-            <T style={{ color: "#888" }}>Select a message from the middle column.</T>
-          )}
+          <View style={{ width: isNarrow ? "100%" : "28%", borderRightWidth: isNarrow ? 0 : 1, borderRightColor: "#111", padding: 8 }}>
+            <Heading style={{ fontSize: 20, fontWeight: "700", marginBottom: 8 }}>Messages</Heading>
+            {selectedAddress ? (
+              <FlatList
+                data={messages}
+                keyExtractor={(m) => m.id}
+                ItemSeparatorComponent={() => <View style={{ height: 6 }} />}
+                renderItem={({ item }) => {
+                  const selected = item.id === selectedMessageId;
+                  return (
+                    <Pressable
+                      onPress={() => setSelectedMessageId(item.id)}
+                      style={({ pressed }) => ({
+                        padding: 10,
+                        backgroundColor: selected ? "#101010" : pressed ? "#0a0a0a" : "#050505",
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: selected ? "#2a2a2a" : "#1a1a1a",
+                      })}
+                    >
+                      <T style={{ fontSize: 15, fontWeight: "600" }}>{item.subject}</T>
+                      <T style={{ color: "#bbb" }} numberOfLines={1}>{item.snippet}</T>
+                      <T style={{ color: "#666", marginTop: 4 }}>From: {item.from}</T>
+                    </Pressable>
+                  );
+                }}
+              />
+            ) : (
+              <T style={{ color: "#888" }}>Select a virtual inbox on the left.</T>
+            )}
+          </View>
+
+          <View style={{ flex: 1, padding: 12 }}>
+            <Heading style={{ fontSize: 20, fontWeight: "700", marginBottom: 8 }}>Message</Heading>
+            {selectedMessage ? (
+              <View>
+                <Heading style={{ fontSize: 18, fontWeight: "700", marginBottom: 8 }}>{selectedMessage.subject}</Heading>
+                <T style={{ color: "#bbb" }}>From: {selectedMessage.from}</T>
+                <T style={{ color: "#bbb" }}>To: {selectedMessage.to}</T>
+                <T style={{ color: "#666", marginBottom: 12 }}>{new Date(selectedMessage.date).toLocaleString()}</T>
+                <T style={{ lineHeight: 22 }}>{selectedMessage.body}</T>
+              </View>
+            ) : (
+              <T style={{ color: "#888" }}>Select a message from the middle column.</T>
+            )}
+          </View>
         </View>
-      </View>
+      )}
     </View>
   );
 }
