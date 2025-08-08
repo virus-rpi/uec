@@ -35,7 +35,6 @@ jobs:
               rustc
               cargo
               nodejs
-              tauri-cli
             ];
             buildInputs = with pkgs; [
               at-spi2-atk
