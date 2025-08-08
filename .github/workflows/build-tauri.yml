@@ -32,9 +32,10 @@ jobs:
             nativeBuildInputs = with pkgs; [
               pkg-config
               gobject-introspection
+              rustc
               cargo
-              cargo-tauri
               nodejs
+              cargo-tauri
             ];
             buildInputs = with pkgs; [
               at-spi2-atk
@@ -52,7 +53,7 @@ jobs:
             ];
           }
           EOF
-          nix-shell shell.nix --run 'npm ci && npm run tauri build'
+          nix-shell shell.nix --run 'npm ci && tauri build'
 
       - name: Upload Tauri build artifacts
         uses: actions/upload-artifact@v4
