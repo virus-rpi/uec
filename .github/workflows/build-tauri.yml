@@ -45,6 +45,8 @@ jobs:
               patchelf
               glibc
               fuse
+              glib.dev
+              gsettings-desktop-schemas
             ];
             buildInputs = with pkgs; [
               at-spi2-atk
