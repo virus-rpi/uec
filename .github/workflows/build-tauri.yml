@@ -64,6 +64,11 @@ jobs:
             ];
           }
           EOF
+
+          # Prepare lib64 symlink for linuxdeploy GTK plugin
+          mkdir -p src-tauri/target/release/bundle/appimage/uec.AppDir/usr
+          ln -sfn lib src-tauri/target/release/bundle/appimage/uec.AppDir/usr/lib64 || true
+
           nix-shell shell.nix --run 'npm ci && cargo tauri build --verbose'
 
       - name: Upload Tauri build artifacts
