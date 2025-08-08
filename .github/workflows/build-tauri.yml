@@ -29,7 +29,7 @@ jobs:
       - name: Build in Nix shell
         env:
           NIX_PATH: ${{ env.NIX_PATH }}
-          LINUXDEPLOY_PLUGIN_GTK_SKIP: "true"
+          NO_STRIP: "true"
         run: |
           cat > shell.nix <<'EOF'
           let
