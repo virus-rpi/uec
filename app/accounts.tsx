@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { Alert, FlatList, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Alert, FlatList, Pressable, ScrollView, Text, TextInput, View, Modal, Platform } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
 import * as Google from "expo-auth-session/providers/google";
-import { addAccount, getAccounts, makeId, MailAccount, ManualAccount, verifyGmailAccessToken } from "./lib/accounts";
+import { addAccount, getAccounts, makeId, MailAccount, ManualAccount, verifyGmailAccessToken, removeAccount } from "@/lib/accounts";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -76,7 +76,9 @@ export default function AccountsScreen() {
     responseType: AuthSession.ResponseType.Token,
     usePKCE: true,
   });
-  console.log(AuthSession.makeRedirectUri({ scheme: "uec" }) )
+
+  const [modalVisible, setModalVisible] = useState(false);
+  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
 
   useEffect(() => {
     getAccounts().then(setAccounts);
@@ -128,6 +130,16 @@ export default function AccountsScreen() {
     setAccounts(list);
     setShowManual(false);
     Alert.alert("Account saved", "Manual server settings stored securely. Note: Connectivity will require a backend or RN socket-capable library.");
+  };
+
+  const handleRemove = async () => {
+    if (pendingRemoveId) {
+      await removeAccount(pendingRemoveId);
+      const list = await getAccounts();
+      setAccounts(list);
+      setPendingRemoveId(null);
+      setModalVisible(false);
+    }
   };
 
   return (
@@ -231,23 +243,88 @@ export default function AccountsScreen() {
       {accounts.length === 0 ? (
         <T style={{ color: "#aaa" }}>No accounts yet.</T>
       ) : (
-        <FlatList
-          data={accounts}
-          keyExtractor={(a) => a.id}
-          scrollEnabled={false}
-          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-          renderItem={({ item }) => (
-            <View style={{ padding: 12, borderWidth: 1, borderColor: "#222", borderRadius: 8, backgroundColor: "#070707" }}>
-              <T style={{ fontWeight: "700" }}>{item.type === "gmail" ? `Gmail${item.email ? `: ${item.email}` : ""}` : item.type === "manual" ? item.displayName || "Manual account" : "Account"}</T>
-              {item.type === "gmail" && (
-                <T style={{ color: "#bbb", marginTop: 4 }}>Access token stored. Expires at: {item.expiresAt ? new Date(item.expiresAt).toLocaleString() : "unknown"}</T>
-              )}
-              {item.type === "manual" && (
-                <T style={{ color: "#bbb", marginTop: 4 }}>{item.incoming.protocol.toUpperCase()} {item.incoming.username}@{item.incoming.host} / SMTP {item.outgoing.host}</T>
-              )}
+        <>
+          <FlatList
+            data={accounts}
+            keyExtractor={(a) => a.id}
+            scrollEnabled={false}
+            ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+            renderItem={({ item }) => (
+              <View style={{ flexDirection: "row", alignItems: "center", padding: 12, borderWidth: 1, borderColor: "#222", borderRadius: 8, backgroundColor: "#070707" }}>
+                <View style={{ flex: 1 }}>
+                  <T style={{ fontWeight: "700" }}>{item.type === "gmail" ? `Gmail${item.email ? `: ${item.email}` : ""}` : item.type === "manual" ? item.displayName || "Manual account" : "Account"}</T>
+                  {item.type === "gmail" && (
+                    <T style={{ color: "#bbb", marginTop: 4 }}>Access token stored. Expires at: {item.expiresAt ? new Date(item.expiresAt).toLocaleString() : "unknown"}</T>
+                  )}
+                  {item.type === "manual" && (
+                    <T style={{ color: "#bbb", marginTop: 4 }}>{item.incoming.protocol.toUpperCase()} {item.incoming.username}@{item.incoming.host} / SMTP {item.outgoing.host}</T>
+                  )}
+                </View>
+                <Pressable
+                  onPress={() => {
+                    setPendingRemoveId(item.id);
+                    setModalVisible(true);
+                  }}
+                  style={({ pressed }) => ({
+                    marginLeft: 10,
+                    width: 36,
+                    height: 36,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: "transparent",
+                    borderRadius: 0,
+                    borderWidth: 0,
+                    padding: 0,
+                  })}
+                  accessibilityLabel="Remove account"
+                >
+                  <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 20, textAlign: "center", fontFamily: Platform.OS === "web" ? "Bitcount, system-ui, sans-serif" : undefined }}>×</Text>
+                </Pressable>
+              </View>
+            )}
+          />
+          <Modal
+            visible={modalVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setModalVisible(false)}
+          >
+            <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center" }}>
+              <View style={{ backgroundColor: "#111", padding: 24, borderRadius: 12, minWidth: 260, alignItems: "center" }}>
+                <T style={{ fontSize: 18, fontWeight: "700", marginBottom: 12 }}>Remove account?</T>
+                <T style={{ color: "#bbb", marginBottom: 18 }}>Are you sure you want to remove this account? This cannot be undone.</T>
+                <View style={{ flexDirection: "row", gap: 16 }}>
+                  <Pressable
+                    onPress={() => {
+                      setModalVisible(false);
+                      setPendingRemoveId(null);
+                    }}
+                    style={({ pressed }) => ({
+                      paddingHorizontal: 18,
+                      paddingVertical: 10,
+                      borderRadius: 8,
+                      backgroundColor: pressed ? "#222" : "#333",
+                      marginRight: 8,
+                    })}
+                  >
+                    <T>Cancel</T>
+                  </Pressable>
+                  <Pressable
+                    onPress={handleRemove}
+                    style={({ pressed }) => ({
+                      paddingHorizontal: 18,
+                      paddingVertical: 10,
+                      borderRadius: 8,
+                      backgroundColor: pressed ? "#a00" : "#d00",
+                    })}
+                  >
+                    <T style={{ color: "#fff" }}>Remove</T>
+                  </Pressable>
+                </View>
+              </View>
             </View>
-          )}
-        />
+          </Modal>
+        </>
       )}
 
       <View style={{ height: 40 }} />

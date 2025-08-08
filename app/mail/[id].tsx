@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
-import { emails } from "../lib/mockData";
+import { emails } from "@/lib/email_utils";
 
 function T(props: any) {
   return <Text {...props} style={[{ color: "#fff" }, props.style]} />;

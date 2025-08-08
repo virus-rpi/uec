@@ -1,6 +1,8 @@
 import { FlatList, Pressable, Text, View, useWindowDimensions } from "react-native";
-import { useMemo, useState } from "react";
-import { emails, groupByToAddress } from "./lib/mockData";
+import { useEffect, useMemo, useState } from "react";
+import { Email, groupByToAddress } from "@/lib/email_utils";
+import { getAccounts, MailAccount } from "@/lib/accounts";
+import { fetchAllEmailsFromAccounts } from "@/lib/gmail";
 
 function Heading(props: any) {
   return (
@@ -29,14 +31,47 @@ function T(props: any) {
 }
 
 export default function Index() {
-  const groups = useMemo(() => groupByToAddress(emails), []);
+  const [accounts, setAccounts] = useState<MailAccount[]>([]);
+  const [items, setItems] = useState<Email[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        const accs = await getAccounts();
+        setAccounts(accs);
+        const emails = await fetchAllEmailsFromAccounts(accs);
+        setItems(emails);
+      } catch (e: any) {
+        setError(String(e?.message || e));
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const groups = useMemo(() => groupByToAddress(items), [items]);
   const addresses = useMemo(() => Object.keys(groups).sort(), [groups]);
-  const [selectedAddress, setSelectedAddress] = useState<string | null>(addresses[0] ?? null);
-  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
-    selectedAddress && groups[selectedAddress]?.slice().sort((a, b) => b.date.localeCompare(a.date))[0]?.id
-      ? groups[selectedAddress].slice().sort((a, b) => b.date.localeCompare(a.date))[0].id
-      : null
-  );
+
+  const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedAddress || !addresses.includes(selectedAddress)) {
+      setSelectedAddress(addresses[0] ?? null);
+    }
+  }, [addresses, selectedAddress]);
+
+  useEffect(() => {
+    if (selectedAddress) {
+      const firstId = groups[selectedAddress]?.slice().sort((a, b) => b.date.localeCompare(a.date))[0]?.id ?? null;
+      setSelectedMessageId(firstId);
+    } else {
+      setSelectedMessageId(null);
+    }
+  }, [selectedAddress, groups]);
 
   const { width } = useWindowDimensions();
   const isNarrow = width < 900;
@@ -46,6 +81,21 @@ export default function Index() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000", margin: 10 }}>
+      {loading && (
+        <View style={{ padding: 8, backgroundColor: "#0a0a0a", borderRadius: 8, borderWidth: 1, borderColor: "#222", marginBottom: 8 }}>
+          <T>Loading emails…</T>
+        </View>
+      )}
+      {!!error && (
+        <View style={{ padding: 8, backgroundColor: "#200", borderRadius: 8, borderWidth: 1, borderColor: "#400", marginBottom: 8 }}>
+          <T style={{ color: "#faa" }}>Error: {error}</T>
+        </View>
+      )}
+      {!loading && !error && items.length === 0 && (
+        <View style={{ padding: 8, backgroundColor: "#0a0a0a", borderRadius: 8, borderWidth: 1, borderColor: "#222", marginBottom: 8 }}>
+          <T>No emails to show yet. Connect your account via the Accounts button in the header.</T>
+        </View>
+      )}
       <View style={{ flex: 1, flexDirection: isNarrow ? "column" : "row" }}>
         <View style={{ width: isNarrow ? "100%" : "22%", borderRightWidth: isNarrow ? 0 : 1, borderRightColor: "#111", padding: 8 }}>
           <Heading style={{ fontSize: 20, fontWeight: "700", marginBottom: 8 }}>Virtual Inboxes</Heading>

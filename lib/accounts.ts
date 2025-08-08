@@ -73,6 +73,10 @@ export async function addAccount(acc: MailAccount): Promise<void> {
 
 export async function removeAccount(id: string): Promise<void> {
   const list = await getAccounts();
+  const acc = list.find((a) => a.id === id);
+  if (acc && acc.type === "gmail" && acc.accessToken) {
+    await revokeGoogleToken(acc.accessToken);
+  }
   const next = list.filter((a) => a.id !== id);
   await saveAccounts(next);
 }
@@ -101,6 +105,17 @@ export async function verifyGmailAccessToken(token: string): Promise<{ ok: boole
     return { ok: true, email: data.email };
   } catch (e: any) {
     return { ok: false, error: String(e?.message || e) };
+  }
+}
+
+export async function revokeGoogleToken(token: string): Promise<void> {
+  try {
+    await fetch(`https://oauth2.googleapis.com/revoke?token=${token}`, {
+      method: "POST",
+      headers: { "Content-type": "application/x-www-form-urlencoded" },
+    });
+  } catch (e) {
+    // Ignore errors
   }
 }
 
