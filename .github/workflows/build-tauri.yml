@@ -17,7 +17,12 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v25
 
+      - name: Set NIX_PATH
+        run: echo "NIX_PATH=nixpkgs=$(nix eval --raw nixpkgs#path)" >> $GITHUB_ENV
+
       - name: Build in Nix shell
+        env:
+          NIX_PATH: ${{ env.NIX_PATH }}
         run: |
           cat > shell.nix <<'EOF'
           let
