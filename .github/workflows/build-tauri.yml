@@ -20,6 +20,12 @@ jobs:
       - name: Set NIX_PATH
         run: echo "NIX_PATH=nixpkgs=$(nix eval --raw nixpkgs#path)" >> $GITHUB_ENV
 
+      - name: Reinstall CA certificates
+        run: |
+          sudo apt-get update
+          sudo apt-get install --reinstall -y ca-certificates
+          sudo update-ca-certificates -f
+
       - name: Build in Nix shell
         env:
           NIX_PATH: ${{ env.NIX_PATH }}
