@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
-import { ScrollView, Text, View, ActivityIndicator, Platform } from "react-native";
+import { Text, View, ActivityIndicator, Platform } from "react-native";
 import { Email } from "@/lib/email_utils";
 import { getAccounts, GmailAccount } from "@/lib/accounts";
 import { fetchGmailEmailById } from "@/lib/gmail";
@@ -34,7 +34,7 @@ export default function MailDetail() {
         if (mounted) setLoading(false);
       }
     }
-    load();
+    load().then();
     return () => {
       mounted = false;
     };
@@ -60,16 +60,20 @@ export default function MailDetail() {
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: "#000" }} contentContainerStyle={{ padding: 16, flexGrow: 1 }}>
-      <T style={{ fontSize: 20, fontWeight: "700", marginBottom: 12 }}>{mail.subject}</T>
-      <T style={{ color: "#bbb" }}>From: {mail.from}</T>
-      <T style={{ color: "#bbb" }}>To: {mail.to}</T>
-      <T style={{ color: "#666", marginBottom: 16 }}>{new Date(mail.date).toLocaleString()}</T>
-      {mail.bodyHtml ? (
-        <HtmlViewer html={mail.bodyHtml} height={`auto`} />
-      ) : (
-        <T style={{ lineHeight: 22 }}>{mail.bodyText || mail.body}</T>
-      )}
-    </ScrollView>
+    <View style={{ flex: 1, backgroundColor: "#000", padding: 16 }}>
+      <View style={{ marginBottom: 12 }}>
+        <T style={{ fontSize: 20, fontWeight: "700", marginBottom: 12 }}>{mail.subject}</T>
+        <T style={{ color: "#bbb" }}>From: {mail.from}</T>
+        <T style={{ color: "#bbb" }}>To: {mail.to}</T>
+        <T style={{ color: "#666", marginBottom: 0 }}>{new Date(mail.date).toLocaleString()}</T>
+      </View>
+      <View style={{ flex: 1, minHeight: 0 }}>
+        {mail.bodyHtml ? (
+          <HtmlViewer html={mail.bodyHtml} />
+        ) : (
+          <T style={{ lineHeight: 22 }}>{mail.bodyText || mail.body}</T>
+        )}
+      </View>
+    </View>
   );
 }

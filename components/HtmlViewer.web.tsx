@@ -1,15 +1,14 @@
 import React from "react";
 import { DimensionValue, View } from "react-native";
 
-export function HtmlViewer({ html, height }: { html: string; height: DimensionValue }) {
-  const isAuto = height === ("auto" as unknown as DimensionValue) || height === undefined || height === null;
+export function HtmlViewer({ html }: { html: string; }) {
   const containerStyle = {
     borderRadius: 8,
     overflow: "hidden" as const,
     borderWidth: 1,
     borderColor: "#111",
     alignSelf: "stretch" as const,
-    ...(isAuto ? { flex: 1 as const, minHeight: 0 } : { height }),
+    height: "100%" as DimensionValue,
   };
   const [iframeSrc, setIframeSrc] = React.useState<string>("");
   React.useEffect(() => {
@@ -26,7 +25,13 @@ export function HtmlViewer({ html, height }: { html: string; height: DimensionVa
     <View style={containerStyle}>
       <iframe
         src={iframeSrc}
-        style={{ width: "100%", height: "100%", border: "none", background: "#000", borderRadius: 8 }}
+        style={{
+          width: "100%",
+          height: "100%",
+          border: "none",
+          background: "#000",
+          borderRadius: 8,
+        }}
         sandbox="allow-same-origin"
         title="Email HTML"
       />

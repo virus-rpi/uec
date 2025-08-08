@@ -181,19 +181,21 @@ export default function Index() {
             )}
           </View>
 
-          <View style={{ flex: 1, padding: 12 }}>
+          <View style={{ flex: 1, padding: 12, maxHeight: '100%', overflow: Platform.OS === 'web' ? 'scroll' : undefined }}>
             <Heading style={{ fontSize: 20, fontWeight: "700", marginBottom: 8 }}>Message</Heading>
             {selectedMessage ? (
-              <View>
+              <View style={{ flex: 1, maxHeight: "100%", overflowY: "scroll"}}>
                 <Heading style={{ fontSize: 18, fontWeight: "700", marginBottom: 8 }}>{selectedMessage.subject}</Heading>
                 <T style={{ color: "#bbb" }}>From: {selectedMessage.from}</T>
                 <T style={{ color: "#bbb" }}>To: {selectedMessage.to}</T>
                 <T style={{ color: "#666", marginBottom: 12 }}>{new Date(selectedMessage.date).toLocaleString()}</T>
-                {selectedMessage.bodyHtml ? (
-                  <HtmlViewer html={selectedMessage.bodyHtml} height={500} />
-                ) : (
-                  <T style={{ lineHeight: 22 }}>{selectedMessage.bodyText || selectedMessage.body}</T>
-                )}
+                <View style={{ flex: 1, minHeight: 0 }}>
+                  {selectedMessage.bodyHtml ? (
+                    <HtmlViewer html={selectedMessage.bodyHtml} />
+                  ) : (
+                    <T style={{ lineHeight: 22 }}>{selectedMessage.bodyText || selectedMessage.body}</T>
+                  )}
+                </View>
               </View>
             ) : (
               <T style={{ color: "#888" }}>Select a message from the middle column.</T>

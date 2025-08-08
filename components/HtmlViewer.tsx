@@ -2,17 +2,14 @@ import React from "react";
 import { DimensionValue, View } from "react-native";
 import { WebView } from "react-native-webview";
 
-export function HtmlViewer({ html, height }: { html: string; height: DimensionValue }) {
-  const isAuto = height === ("auto" as unknown as DimensionValue) || height === undefined || height === null;
+export function HtmlViewer({ html }: { html: string }) {
   const containerStyle = {
     borderRadius: 8,
     overflow: "hidden" as const,
     borderWidth: 1,
     borderColor: "#111",
     alignSelf: "stretch" as const,
-    ...(isAuto
-      ? { flex: 1 as const, minHeight: 0 }
-      : { height }),
+    height: "100%" as DimensionValue,
   };
   return (
     <View style={containerStyle}>
