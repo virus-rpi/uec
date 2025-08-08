@@ -1,8 +1,9 @@
 import { FlatList, Pressable, Text, View, useWindowDimensions, ActivityIndicator, Platform } from "react-native";
 import { useEffect, useMemo, useState } from "react";
 import { Email, groupByToAddress } from "@/lib/email_utils";
-import { getAccounts, MailAccount } from "@/lib/accounts";
+import { getAccounts } from "@/lib/accounts";
 import { fetchAllEmailsFromAccounts } from "@/lib/gmail";
+import { HtmlViewer } from "@/components/HtmlViewer";
 
 function Heading(props: any) {
   return (
@@ -43,7 +44,6 @@ function Wireframe() {
 }
 
 export default function Index() {
-  const [accounts, setAccounts] = useState<MailAccount[]>([]);
   const [items, setItems] = useState<Email[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +53,6 @@ export default function Index() {
       try {
         setLoading(true);
         const accs = await getAccounts();
-        setAccounts(accs);
         const emails = await fetchAllEmailsFromAccounts(accs);
         setItems(emails);
       } catch (e: any) {
@@ -190,7 +189,11 @@ export default function Index() {
                 <T style={{ color: "#bbb" }}>From: {selectedMessage.from}</T>
                 <T style={{ color: "#bbb" }}>To: {selectedMessage.to}</T>
                 <T style={{ color: "#666", marginBottom: 12 }}>{new Date(selectedMessage.date).toLocaleString()}</T>
-                <T style={{ lineHeight: 22 }}>{selectedMessage.body}</T>
+                {selectedMessage.bodyHtml ? (
+                  <HtmlViewer html={selectedMessage.bodyHtml} height={500} />
+                ) : (
+                  <T style={{ lineHeight: 22 }}>{selectedMessage.bodyText || selectedMessage.body}</T>
+                )}
               </View>
             ) : (
               <T style={{ color: "#888" }}>Select a message from the middle column.</T>

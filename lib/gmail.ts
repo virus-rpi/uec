@@ -13,7 +13,7 @@ function decodeBody(data?: string): string | undefined {
   try {
     const b64 = data.replace(/-/g, "+").replace(/_/g, "/");
     const decoded = typeof atob !== "undefined" ? atob(b64) : (typeof Buffer !== "undefined" ? Buffer.from(b64, "base64").toString("utf8") : undefined);
-        if (decoded === undefined) return undefined;
+    if (decoded === undefined) return undefined;
     return decoded;
   } catch {
     return undefined;
@@ -22,7 +22,7 @@ function decodeBody(data?: string): string | undefined {
 
 function extractTextFromPayload(payload: any): string | undefined {
   if (!payload) return undefined;
-  if (payload.mimeType === "text/plain" && payload.body?.data) {
+  if (payload.mimeType?.startsWith("text/plain") && payload.body?.data) {
     return decodeBody(payload.body.data);
   }
   if (payload.parts && Array.isArray(payload.parts)) {
@@ -34,7 +34,21 @@ function extractTextFromPayload(payload: any): string | undefined {
   return undefined;
 }
 
-// Improved cache: cache by message ID
+function extractHtmlFromPayload(payload: any): string | undefined {
+  if (!payload) return undefined;
+  if (payload.mimeType?.startsWith("text/html") && payload.body?.data) {
+    return decodeBody(payload.body.data);
+  }
+  if (payload.parts && Array.isArray(payload.parts)) {
+    // Prefer direct html under multipart/alternative or nested structures
+    for (const part of payload.parts) {
+      const html = extractHtmlFromPayload(part);
+      if (html) return html;
+    }
+  }
+  return undefined;
+}
+
 const gmailEmailCache: Record<string, Email> = {};
 let gmailPageTokenCache: Record<string, string | undefined> = {};
 
@@ -110,8 +124,10 @@ export async function fetchGmailEmails(
     const dateHeader = getHeader(hdrs, "Date");
     const date = dateHeader ? new Date(dateHeader).toISOString() : new Date(msg.internalDate ? Number(msg.internalDate) : Date.now()).toISOString();
     const snippet: string = msg.snippet || "";
-    const body = extractTextFromPayload(msg.payload) || snippet;
-    const email: Email = { id, to, from, subject, snippet, date, body };
+    const bodyText = extractTextFromPayload(msg.payload);
+    const bodyHtml = extractHtmlFromPayload(msg.payload);
+    const body = bodyText || snippet; // keep legacy field populated for older UI
+    const email: Email = { id, to, from, subject, snippet, date, body, bodyText: bodyText ?? undefined, bodyHtml: bodyHtml ?? undefined };
     await setCachedEmail(id, email);
     return email;
   });
@@ -148,4 +164,28 @@ export async function fetchAllEmailsFromAccounts(accounts: MailAccount[]): Promi
     }
   }
   return all;
+}
+
+export async function fetchGmailEmailById(account: GmailAccount, id: string): Promise<Email | undefined> {
+  const cached = await getCachedEmail(id);
+  if (cached) return cached;
+  const headers = { Authorization: `Bearer ${account.accessToken}` } as const;
+  const msgRes = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=full`, { headers });
+  if (!msgRes.ok) {
+    throw new Error(`Gmail message fetch failed: HTTP ${msgRes.status}`);
+  }
+  const msg = await msgRes.json();
+  const hdrs: { name: string; value: string }[] = msg.payload?.headers || [];
+  const from = getHeader(hdrs, "From") || "";
+  const to = getHeader(hdrs, "To") || (account.email || "");
+  const subject = getHeader(hdrs, "Subject") || "(no subject)";
+  const dateHeader = getHeader(hdrs, "Date");
+  const date = dateHeader ? new Date(dateHeader).toISOString() : new Date(msg.internalDate ? Number(msg.internalDate) : Date.now()).toISOString();
+  const snippet: string = msg.snippet || "";
+  const bodyText = extractTextFromPayload(msg.payload);
+  const bodyHtml = extractHtmlFromPayload(msg.payload);
+  const body = bodyText || snippet;
+  const email: Email = { id, to, from, subject, snippet, date, body, bodyText: bodyText ?? undefined, bodyHtml: bodyHtml ?? undefined };
+  await setCachedEmail(id, email);
+  return email;
 }

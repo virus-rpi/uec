@@ -9,22 +9,6 @@ export default function RootLayout() {
     Bitcount: require("../assets/fonts/Bitcount.ttf"),
   });
 
-  useEffect(() => {
-    if (Platform.OS === "web") {
-      const id = "bitcount-preload";
-      if (!document.getElementById(id)) {
-        const link = document.createElement("link");
-        link.id = id;
-        link.rel = "preload";
-        link.as = "font";
-        link.href = "/assets/fonts/Bitcount.ttf";
-        link.type = "font/ttf";
-        link.crossOrigin = "anonymous";
-        document.head.appendChild(link);
-      }
-    }
-  }, []);
-
   if (!loaded) return null;
 
   return (
